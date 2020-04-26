@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -99,9 +100,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
-        if (buffer == null) {
-            throw new NullPointerException("buffer");
-        }
+        ObjectUtil.checkNotNull(buffer, "buffer");
         try {
             size = buffer.readableBytes();
             checkSize(size);
@@ -125,8 +124,8 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 return;
             }
             RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
-            accessFile.setLength(0);
             try {
+                accessFile.setLength(0);
                 FileChannel localfileChannel = accessFile.getChannel();
                 ByteBuffer byteBuffer = buffer.nioBuffer();
                 int written = 0;
@@ -185,14 +184,15 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
                 RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
                 fileChannel = accessFile.getChannel();
             }
-            fileChannel.force(false);
-            fileChannel.close();
+            try {
+                fileChannel.force(false);
+            } finally {
+                fileChannel.close();
+            }
             fileChannel = null;
             setCompleted();
         } else {
-            if (buffer == null) {
-                throw new NullPointerException("buffer");
-            }
+            ObjectUtil.checkNotNull(buffer, "buffer");
         }
     }
 
@@ -210,17 +210,15 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public void setContent(InputStream inputStream) throws IOException {
-        if (inputStream == null) {
-            throw new NullPointerException("inputStream");
-        }
+        ObjectUtil.checkNotNull(inputStream, "inputStream");
         if (file != null) {
             delete();
         }
         file = tempFile();
         RandomAccessFile accessFile = new RandomAccessFile(file, "rw");
-        accessFile.setLength(0);
         int written = 0;
         try {
+            accessFile.setLength(0);
             FileChannel localfileChannel = accessFile.getChannel();
             byte[] bytes = new byte[4096 * 4];
             ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
@@ -341,9 +339,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
 
     @Override
     public boolean renameTo(File dest) throws IOException {
-        if (dest == null) {
-            throw new NullPointerException("dest");
-        }
+        ObjectUtil.checkNotNull(dest, "dest");
         if (file == null) {
             throw new IOException("No file defined so cannot be renamed");
         }

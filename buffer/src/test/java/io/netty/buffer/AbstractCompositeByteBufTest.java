@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.Assume;
 import org.junit.Test;
@@ -23,6 +24,7 @@ import org.junit.Test;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -57,10 +59,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     private final ByteOrder order;
 
     protected AbstractCompositeByteBufTest(ByteOrder order) {
-        if (order == null) {
-            throw new NullPointerException("order");
-        }
-        this.order = order;
+        this.order = ObjectUtil.checkNotNull(order, "order");
     }
 
     @Override
@@ -1535,5 +1534,56 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             assertEquals(0, buffer.refCnt());
         }
         assertTrue(cbuf.release());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testOverflowWhileAddingComponent() {
+        int capacity = 1024 * 1024; // 1MB
+        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+
+        try {
+            for (int i = 0; i >= 0; i += buffer.readableBytes()) {
+                ByteBuf duplicate = buffer.duplicate();
+                compositeByteBuf.addComponent(duplicate);
+                duplicate.retain();
+            }
+        } finally {
+            compositeByteBuf.release();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testOverflowWhileAddingComponentsViaVarargs() {
+        int capacity = 1024 * 1024; // 1MB
+        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+
+        try {
+            for (int i = 0; i >= 0; i += buffer.readableBytes()) {
+                ByteBuf duplicate = buffer.duplicate();
+                compositeByteBuf.addComponents(duplicate);
+                duplicate.retain();
+            }
+        } finally {
+            compositeByteBuf.release();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testOverflowWhileAddingComponentsViaIterable() {
+        int capacity = 1024 * 1024; // 1MB
+        ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+
+        try {
+            for (int i = 0; i >= 0; i += buffer.readableBytes()) {
+                ByteBuf duplicate = buffer.duplicate();
+                compositeByteBuf.addComponents(Collections.singletonList(duplicate));
+                duplicate.retain();
+            }
+        } finally {
+            compositeByteBuf.release();
+        }
     }
 }
